@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  emby-tgbot:
+    image: fckipk/emby-tgbot:latest
+    container_name: emby_tgbot_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
+      - WEB_PORT=5000

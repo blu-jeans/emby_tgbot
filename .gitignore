@@ -1,0 +1,39 @@
+# =================================================================
+# Emby Telegram Bot Git Ignore Configurations
+# =================================================================
+
+# 1. 数据库与运行数据目录（防止本地调试数据污染云端）
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 2. Python 编译缓存与字节码
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 3. 本地日志与运行记录
+*.log
+logs/
+
+# 4. IDE 配置文件与编辑器环境
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# 5. 本地虚拟环境目录
+venv/
+.venv/
+env/
+ENV/
+
+# 6. 系统临时文件
+.DS_Store
+Thumbs.db

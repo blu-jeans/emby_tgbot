@@ -56,15 +56,23 @@ def generate_random_password(length=12):
 
 def get_default_user_settings():
     """获取模板用户的配置信息"""
+    if not config.template_user_id:
+        return {"Policy": {}, "Configuration": {}}
     url = f"{config.emby_server_url}/Users/{config.template_user_id}"
     headers = {
         'X-Emby-Token': config.emby_api_key
     }
-    response = requests.get(url, headers=headers, timeout=10)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise Exception(f'Error fetching default user settings: {response.status_code} {response.text}')
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.warning(f"Error fetching default user settings ({response.status_code}). Fallback to default.")
+            return {"Policy": {}, "Configuration": {}}
+    except Exception as e:
+        logger.warning(f"Failed to fetch template user settings: {e}. Fallback to default.")
+        return {"Policy": {}, "Configuration": {}}
+
 
 def update_user_policy(user_id):
     """更新 Emby 用户的权限策略，支持合并自定义 JSON 策略"""
@@ -119,7 +127,7 @@ async def is_user_in_group(context: ContextTypes.DEFAULT_TYPE, user_id):
             if member.status in ['member', 'administrator', 'creator']:
                 return True
         except Exception as e:
-            logger.debug(f"Error checking status for chat {chat_id}: {e}")
+            logger.warning(f"Error checking status for chat {chat_id} (Ensure the Bot is added to the group): {e}")
             continue
     return False
 
@@ -153,8 +161,8 @@ async def createaccount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """处理 /createaccount 命令入口"""
     chat_id = update.effective_user.id
 
-    # 1. 检查后台配置是否完整
-    if not (config.emby_server_url and config.emby_api_key and config.allowed_chat_ids and config.template_user_id):
+    # 1. 检查后台配置是否完整 (允许 template_user_id 留空)
+    if not (config.emby_server_url and config.emby_api_key and config.allowed_chat_ids):
         await update.message.reply_text("❌ 系统配置未完成，无法注册账号。请联系管理员登录后台配置 Emby 属性。")
         return
 

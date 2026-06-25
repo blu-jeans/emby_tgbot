@@ -168,3 +168,22 @@ def delete_user_record(user_id):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': f'删除失败: {str(e)}'}), 500
+
+@app.route('/api/logs', methods=['GET'])
+@login_required
+def get_logs():
+    """获取最新日志内容"""
+    log_path = os.path.join('data', 'bot.log')
+    if not os.path.exists(log_path):
+        return jsonify({'logs': '暂无日志记录。'})
+        
+    try:
+        lines_count = int(request.args.get('lines', 200))
+        # 考虑到性能和并发，读取最后 lines_count 行
+        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+            last_lines = lines[-lines_count:]
+            return jsonify({'logs': ''.join(last_lines)})
+    except Exception as e:
+        return jsonify({'error': f'读取日志失败: {str(e)}'}), 500
+

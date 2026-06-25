@@ -73,6 +73,65 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // 系统运行日志逻辑
+    const logConsole = document.getElementById('logConsole');
+    const autoRefreshLogs = document.getElementById('autoRefreshLogs');
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+
+    if (logConsole) {
+        let isFetchingLogs = false;
+        const fetchLogs = async () => {
+            if (isFetchingLogs) return;
+            isFetchingLogs = true;
+            try {
+                const response = await fetch('/api/logs?lines=200');
+                const data = await response.json();
+                if (response.ok) {
+                    // 判断当前滚动条是否在最底部（允许误差 50px）
+                    const isAtBottom = logConsole.scrollHeight - logConsole.clientHeight <= logConsole.scrollTop + 50;
+                    
+                    logConsole.textContent = data.logs;
+                    
+                    // 如果原本在底部，或者刚才刚初始化，就把滚动条拉到底部
+                    if (isAtBottom || logConsole.textContent.trim() === '正在加载系统日志...') {
+                        logConsole.scrollTop = logConsole.scrollHeight;
+                    }
+                } else {
+                    logConsole.textContent = '获取日志失败: ' + (data.error || '未知错误');
+                }
+            } catch (err) {
+                logConsole.textContent = '获取日志失败: 网络请求异常';
+            } finally {
+                isFetchingLogs = false;
+            }
+        };
+
+        // 绑定手动刷新
+        if (refreshLogsBtn) {
+            refreshLogsBtn.addEventListener('click', () => {
+                fetchLogs();
+            });
+        }
+
+        // 绑定清空控制台
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', () => {
+                logConsole.textContent = '控制台已清空。';
+            });
+        }
+
+        // 初始拉取
+        fetchLogs();
+
+        // 轮询拉取
+        setInterval(() => {
+            if (autoRefreshLogs && autoRefreshLogs.checked) {
+                fetchLogs();
+            }
+        }, 5000);
+    }
 });
 
 // 检查并更新 Bot 状态指示器

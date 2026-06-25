@@ -11,12 +11,22 @@ sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from app.database import init_db, get_setting
 from app.web import app, set_bot_manager
 
-# 配置日志输出格式
+# 配置日志输出格式，兼顾标准输出和回滚日志文件
+log_dir = 'data'
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+log_path = os.path.join(log_dir, 'bot.log')
+
+from logging.handlers import RotatingFileHandler
+file_handler = RotatingFileHandler(log_path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding='utf-8')
+stream_handler = logging.StreamHandler(sys.stdout)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout)
+        stream_handler,
+        file_handler
     ]
 )
 logger = logging.getLogger("emby_tgbot.main")

@@ -11,14 +11,56 @@ sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from app.database import init_db, get_setting
 from app.web import app, set_bot_manager
 
-# 配置日志输出格式，兼顾标准输出和回滚日志文件
+# 配置日志输出格式，兼顾标准输出与每日回滚，并添加 1G 总体积上限限制
 log_dir = 'data'
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 log_path = os.path.join(log_dir, 'bot.log')
 
-from logging.handlers import RotatingFileHandler
-file_handler = RotatingFileHandler(log_path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding='utf-8')
+import glob
+from logging.handlers import TimedRotatingFileHandler
+
+class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
+    """按天回滚，且自动清理老日志保证总大小不超过 1GB 的日志 Handler"""
+    def __init__(self, filename, when='D', interval=1, encoding='utf-8'):
+        # backupCount 设为 0，我们使用自定义的清理逻辑控制总体积
+        super().__init__(filename, when=when, interval=interval, backupCount=0, encoding=encoding)
+
+    def doRollover(self):
+        super().doRollover()
+        self.cleanup_old_logs()
+
+    def cleanup_old_logs(self):
+        try:
+            max_bytes = 1024 * 1024 * 1024  # 1 GB
+            log_directory = os.path.dirname(self.baseFilename)
+            base_name = os.path.basename(self.baseFilename)
+            
+            # 搜索匹配如 bot.log* 的所有回滚日志文件
+            log_files = glob.glob(os.path.join(log_directory, base_name + "*"))
+            total_size = sum(os.path.getsize(f) for f in log_files if os.path.isfile(f))
+            
+            if total_size <= max_bytes:
+                return
+                
+            # 按修改时间升序排列备份日志文件（最旧的排在前面）
+            backup_files = [f for f in log_files if f != self.baseFilename and os.path.isfile(f)]
+            backup_files.sort(key=os.path.getmtime)
+            
+            for f in backup_files:
+                file_size = os.path.getsize(f)
+                try:
+                    os.remove(f)
+                    total_size -= file_size
+                    sys.stdout.write(f"Log Cleaner: Removed old log backup '{f}' ({file_size} bytes) to free up space.\n")
+                    if total_size <= max_bytes:
+                        break
+                except Exception as e:
+                    sys.stderr.write(f"Failed to delete old log file {f}: {e}\n")
+        except Exception as e:
+            sys.stderr.write(f"Error executing log cleanup: {e}\n")
+
+file_handler = SafeTimedRotatingFileHandler(log_path, when='D', interval=1, encoding='utf-8')
 stream_handler = logging.StreamHandler(sys.stdout)
 
 logging.basicConfig(
@@ -125,11 +167,12 @@ class BotManager:
 
         try:
             from telegram.ext import ApplicationBuilder, CommandHandler
-            from app.bot import createaccount
+            from app.bot import createaccount, get_group_id
 
             # 构建 Application
             self.application = ApplicationBuilder().token(token).build()
             self.application.add_handler(CommandHandler("createaccount", createaccount))
+            self.application.add_handler(CommandHandler("groupid", get_group_id))
 
             # 初始化并启动
             await self.application.initialize()

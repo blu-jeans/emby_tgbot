@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBotStatus();
     setInterval(checkBotStatus, 5000);
 
+    // 初始化 Tab 面板切换
+    initTabs();
+
     // 初始化白名单群组标签输入
     initTagsInput();
 
@@ -329,6 +332,61 @@ function initTagsInput() {
     
     function updateHiddenValue() {
         hiddenInput.value = tags.join(',');
+    }
+}
+
+// 初始化选项卡切换逻辑 (Tabs Control)
+function initTabs() {
+    const tabButtons = document.querySelectorAll('.nav-tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    
+    if (tabButtons.length === 0) return;
+    
+    // 切换 Tab 功能
+    function switchTab(tabName) {
+        // 1. 更新按钮状态
+        tabButtons.forEach(btn => {
+            if (btn.getAttribute('data-tab') === tabName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // 2. 更新面板状态
+        tabPanels.forEach(panel => {
+            if (panel.id === `panel-${tabName}`) {
+                panel.classList.add('active');
+            } else {
+                panel.classList.remove('active');
+            }
+        });
+        
+        // 3. 记住当前 Tab
+        localStorage.setItem('activeTab', tabName);
+        
+        // 4. 优化：如果切换到日志页，立即拉取一次日志
+        if (tabName === 'logs') {
+            const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+            if (refreshLogsBtn) refreshLogsBtn.click();
+        }
+    }
+    
+    // 给所有 Tab 按钮绑定点击事件
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.getAttribute('data-tab');
+            switchTab(tabName);
+        });
+    });
+    
+    // 恢复历史 Tab 状态，默认展示首个 Tab (settings)
+    const savedTab = localStorage.getItem('activeTab');
+    if (savedTab && document.getElementById(`panel-${savedTab}`)) {
+        switchTab(savedTab);
+    } else {
+        const firstTab = tabButtons[0].getAttribute('data-tab');
+        switchTab(firstTab);
     }
 }
 

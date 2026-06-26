@@ -26,132 +26,145 @@
             </div>
         </header>
 
-        <!-- 仪表盘核心布局 -->
-        <main class="dashboard-grid">
-            <!-- 配置部分 -->
-            <div class="glass-card" style="display: flex; flex-direction: column; gap: 30px;">
-                <!-- Bot 核心属性配置 -->
-                <div>
-                    <h3 class="section-title">系统参数配置</h3>
-                    <form id="settingsForm">
-                        <div class="form-group">
-                            <label for="tg_token">Telegram Bot Token</label>
-                            <input type="text" id="tg_token" name="tg_token" class="form-control" placeholder="123456789:ABCdefGhI..." value="{{ settings.tg_token }}">
+        <!-- 仪表盘核心 Tab 选项卡布局 -->
+        <main class="dashboard-layout">
+            <!-- 左侧侧边栏导航 -->
+            <aside class="sidebar-nav glass-card">
+                <button class="nav-tab-btn active" data-tab="settings">⚙️ 系统配置</button>
+                <button class="nav-tab-btn" data-tab="users">👥 用户管理</button>
+                <button class="nav-tab-btn" data-tab="logs">📜 运行日志</button>
+            </aside>
+
+            <!-- 右侧内容区域 -->
+            <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+                <!-- Tab 1: 系统配置 -->
+                <div class="tab-panel active" id="panel-settings">
+                    <div class="glass-card" style="display: flex; flex-direction: column; gap: 30px;">
+                        <!-- Bot 核心属性配置 -->
+                        <div>
+                            <h3 class="section-title">系统参数配置</h3>
+                            <form id="settingsForm">
+                                <div class="form-group">
+                                    <label for="tg_token">Telegram Bot Token</label>
+                                    <input type="text" id="tg_token" name="tg_token" class="form-control" placeholder="123456789:ABCdefGhI..." value="{{ settings.tg_token }}">
+                                </div>
+                                <div class="form-group">
+                                    <label>白名单群组 ID (支持输入多个，回车添加)</label>
+                                    <div class="tags-input-container form-control" id="tagsInputContainer" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 46px; height: auto;">
+                                        <div class="tags-list" id="tagsList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                                        <input type="text" id="tagInput" placeholder="回车添加群组 ID" style="background: transparent; border: none; outline: none; color: inherit; flex: 1; min-width: 120px; font-size: 0.95rem; padding: 4px 0;">
+                                    </div>
+                                    <input type="hidden" id="allowed_chat_id" name="allowed_chat_id" value="{{ settings.allowed_chat_id }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="emby_server_url">Emby 服务器内网地址 (EMBY_SERVER_URL)</label>
+                                    <input type="url" id="emby_server_url" name="emby_server_url" class="form-control" placeholder="http://172.17.0.1:8096" value="{{ settings.emby_server_url }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="emby_api_key">Emby API Key</label>
+                                    <input type="text" id="emby_api_key" name="emby_api_key" class="form-control" placeholder="输入从 Emby 后台生成的 API 密钥" value="{{ settings.emby_api_key }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="emby_proxy_url">Emby 外部反代地址 (EMBY_PROXY_URL)</label>
+                                    <input type="text" id="emby_proxy_url" name="emby_proxy_url" class="form-control" placeholder="http://emby.yourdomain.com" value="{{ settings.emby_proxy_url }}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="template_user_id">默认参考用户 ID (可选，用于克隆特定外观/播放配置)</label>
+                                    <input type="text" id="template_user_id" name="template_user_id" class="form-control" placeholder="留空则直接使用纯自定义策略开号" value="{{ settings.template_user_id }}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="policy_json">自定义策略 JSON (可选)</label>
+                                    <textarea id="policy_json" name="policy_json" class="form-control" placeholder='例如: {"EnableSync": true, "AllowCameraUpload": true}'>{{ settings.policy_json }}</textarea>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">将覆盖或合并到默认的 Policy 规则中，留空或写 {} 即用默认值。</span>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-block">保存设置并重载 Bot</button>
+                            </form>
                         </div>
-                        <div class="form-group">
-                            <label>白名单群组 ID (支持输入多个，回车添加)</label>
-                            <div class="tags-input-container form-control" id="tagsInputContainer" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 46px; height: auto;">
-                                <div class="tags-list" id="tagsList" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
-                                <input type="text" id="tagInput" placeholder="回车添加群组 ID" style="background: transparent; border: none; outline: none; color: inherit; flex: 1; min-width: 120px; font-size: 0.95rem; padding: 4px 0;">
-                            </div>
-                            <input type="hidden" id="allowed_chat_id" name="allowed_chat_id" value="{{ settings.allowed_chat_id }}">
+
+                        <hr style="border: 0; border-top: 1px solid var(--border-color);">
+
+                        <!-- 管理密码修改 -->
+                        <div>
+                            <h3 class="section-title">修改管理员密码</h3>
+                            <form id="passwordForm">
+                                <div class="form-group">
+                                    <label for="oldPassword">原密码</label>
+                                    <input type="password" id="oldPassword" class="form-control" required autocomplete="current-password">
+                                </div>
+                                <div class="form-group">
+                                    <label for="newPassword">新密码</label>
+                                    <input type="password" id="newPassword" class="form-control" required autocomplete="new-password">
+                                </div>
+                                <div class="form-group">
+                                    <label for="confirmPassword">确认新密码</label>
+                                    <input type="password" id="confirmPassword" class="form-control" required autocomplete="new-password">
+                                </div>
+                                <button type="submit" class="btn btn-secondary btn-block">确认修改</button>
+                            </form>
                         </div>
-                        <div class="form-group">
-                            <label for="emby_server_url">Emby 服务器内网地址 (EMBY_SERVER_URL)</label>
-                            <input type="url" id="emby_server_url" name="emby_server_url" class="form-control" placeholder="http://172.17.0.1:8096" value="{{ settings.emby_server_url }}">
-                        </div>
-                        <div class="form-group">
-                            <label for="emby_api_key">Emby API Key</label>
-                            <input type="text" id="emby_api_key" name="emby_api_key" class="form-control" placeholder="输入从 Emby 后台生成的 API 密钥" value="{{ settings.emby_api_key }}">
-                        </div>
-                        <div class="form-group">
-                            <label for="emby_proxy_url">Emby 外部反代地址 (EMBY_PROXY_URL)</label>
-                            <input type="text" id="emby_proxy_url" name="emby_proxy_url" class="form-control" placeholder="http://emby.yourdomain.com" value="{{ settings.emby_proxy_url }}">
-                        </div>
-                        <div class="form-group">
-                            <label for="template_user_id">默认参考用户 ID (Template User ID)</label>
-                            <input type="text" id="template_user_id" name="template_user_id" class="form-control" placeholder="用于克隆默认设置的 Emby 用户 ID" value="{{ settings.template_user_id }}">
-                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: 用户管理 -->
+                <div class="tab-panel" id="panel-users">
+                    <div class="glass-card" style="display: flex; flex-direction: column;">
+                        <h3 class="section-title">已开通 Emby 账号管理</h3>
                         
-                        <div class="form-group">
-                            <label for="policy_json">自定义策略 JSON (可选)</label>
-                            <textarea id="policy_json" name="policy_json" class="form-control" placeholder='例如: {"EnableSync": true, "AllowCameraUpload": true}'>{{ settings.policy_json }}</textarea>
-                            <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">将覆盖或合并到默认的 Policy 规则中，留空或写 {} 即用默认值。</span>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-block">保存设置并重载 Bot</button>
-                    </form>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid var(--border-color);">
-
-                <!-- 管理密码修改 -->
-                <div>
-                    <h3 class="section-title">修改管理员密码</h3>
-                    <form id="passwordForm">
-                        <div class="form-group">
-                            <label for="oldPassword">原密码</label>
-                            <input type="password" id="oldPassword" class="form-control" required autocomplete="current-password">
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">新密码</label>
-                            <input type="password" id="newPassword" class="form-control" required autocomplete="new-password">
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmPassword">确认新密码</label>
-                            <input type="password" id="confirmPassword" class="form-control" required autocomplete="new-password">
-                        </div>
-                        <button type="submit" class="btn btn-secondary btn-block">确认修改</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- 右侧区域 -->
-            <div style="display: flex; flex-direction: column; gap: 30px;">
-                <!-- 用户列表部分 -->
-                <div class="glass-card" style="display: flex; flex-direction: column;">
-                    <h3 class="section-title">已开通 Emby 账号管理</h3>
-                    
-                    <div class="table-responsive" style="flex: 1;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>用户名</th>
-                                    <th>TG Chat ID</th>
-                                    <th>密码</th>
-                                    <th>创建日期</th>
-                                    <th style="text-align: right;">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in users %}
-                                <tr id="user-row-{{ user.id }}">
-                                    <td><span class="user-username">{{ user.emby_username }}</span></td>
-                                    <td><span style="font-family: monospace; color: var(--text-secondary);">{{ user.chat_id }}</span></td>
-                                    <td>
-                                        <div class="user-pwd-container">
-                                            <span class="pwd-text masked" id="pwd-{{ user.id }}">{{ user.password }}</span>
-                                            <button class="btn-icon" onclick="togglePassword(this, '{{ user.id }}')">🙈</button>
-                                        </div>
-                                    </td>
-                                    <td style="color: var(--text-muted); font-size: 0.8rem;">{{ user.created_at }}</td>
-                                    <td style="text-align: right;">
-                                        <button class="btn-icon" style="color: var(--error);" onclick="deleteUser('{{ user.id }}', '{{ user.emby_username }}')" title="仅从后台删除记录">🗑️</button>
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="5" style="text-align: center; padding: 40px 0; color: var(--text-muted);">暂无注册用户数据</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 系统运行日志部分 -->
-                <div class="glass-card" style="display: flex; flex-direction: column; gap: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <h3 class="section-title" style="margin-bottom: 0;">系统运行日志</h3>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <label style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                                <input type="checkbox" id="autoRefreshLogs" checked style="accent-color: var(--accent); cursor: pointer; width: 14px; height: 14px;"> 自动刷新
-                            </label>
-                            <button type="button" class="btn btn-secondary" id="clearLogsBtn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;">清空控制台</button>
-                            <button type="button" class="btn btn-primary" id="refreshLogsBtn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; box-shadow: none;">刷新</button>
+                        <div class="table-responsive" style="flex: 1; margin-top: 10px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>用户名</th>
+                                        <th>TG Chat ID</th>
+                                        <th>密码</th>
+                                        <th>创建日期</th>
+                                        <th style="text-align: right;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr id="user-row-{{ user.id }}">
+                                        <td><span class="user-username">{{ user.emby_username }}</span></td>
+                                        <td><span style="font-family: monospace; color: var(--text-secondary);">{{ user.chat_id }}</span></td>
+                                        <td>
+                                            <div class="user-pwd-container">
+                                                <span class="pwd-text masked" id="pwd-{{ user.id }}">{{ user.password }}</span>
+                                                <button class="btn-icon" onclick="togglePassword(this, '{{ user.id }}')">🙈</button>
+                                            </div>
+                                        </td>
+                                        <td style="color: var(--text-muted); font-size: 0.8rem;">{{ user.created_at }}</td>
+                                        <td style="text-align: right;">
+                                            <button class="btn-icon" style="color: var(--error);" onclick="deleteUser('{{ user.id }}', '{{ user.emby_username }}')" title="仅从后台删除记录">🗑️</button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 40px 0; color: var(--text-muted);">暂无注册用户数据</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <div id="logConsole" style="background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; line-height: 1.45; color: #a7f3d0; height: 320px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);">正在加载系统日志...</div>
+                </div>
+
+                <!-- Tab 3: 系统运行日志 -->
+                <div class="tab-panel" id="panel-logs">
+                    <div class="glass-card" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <h3 class="section-title" style="margin-bottom: 0;">系统运行日志</h3>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <label style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="autoRefreshLogs" checked style="accent-color: var(--accent); cursor: pointer; width: 14px; height: 14px;"> 自动刷新
+                                </label>
+                                <button type="button" class="btn btn-secondary" id="clearLogsBtn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;">清空控制台</button>
+                                <button type="button" class="btn btn-primary" id="refreshLogsBtn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; box-shadow: none;">刷新</button>
+                            </div>
+                        </div>
+                        <div id="logConsole" style="background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; line-height: 1.45; color: #a7f3d0; height: 420px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);">正在加载系统日志...</div>
+                    </div>
                 </div>
             </div>
         </main>

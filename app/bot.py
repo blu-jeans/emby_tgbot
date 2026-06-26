@@ -74,18 +74,9 @@ def get_default_user_settings():
         return {"Policy": {}, "Configuration": {}}
 
 
-def update_user_policy(user_id):
-    """更新 Emby 用户的权限策略，支持合并自定义 JSON 策略"""
-    url = f"{config.emby_server_url}/Users/{user_id}/Policy"
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Emby-Token': config.emby_api_key
-    }
-    
-    # 优先采用默认策略模版
+def get_merged_policy():
+    """获取合并了自定义配置后的 Policy 字典"""
     policy_payload = DEFAULT_POLICY.copy()
-    
-    # 如果配置了自定义的 policy_json，进行合并
     custom_policy_str = config.policy_json
     if custom_policy_str and custom_policy_str.strip() != '{}':
         try:
@@ -94,7 +85,16 @@ def update_user_policy(user_id):
                 policy_payload.update(custom_policy)
         except Exception as e:
             logger.error(f"Error parsing custom policy JSON: {e}")
+    return policy_payload
 
+def update_user_policy(user_id):
+    """更新 Emby 用户的权限策略"""
+    url = f"{config.emby_server_url}/Users/{user_id}/Policy"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Emby-Token': config.emby_api_key
+    }
+    policy_payload = get_merged_policy()
     response = requests.post(url, headers=headers, json=policy_payload, timeout=10)
     if response.status_code != 204:
         raise Exception(f'Error updating user policy: {response.status_code} {response.text}')
@@ -131,6 +131,19 @@ async def is_user_in_group(context: ContextTypes.DEFAULT_TYPE, user_id):
             continue
     return False
 
+async def get_group_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """在群组内回复当前群组的 Chat ID"""
+    chat = update.effective_chat
+    if chat.type in [Chat.GROUP, Chat.SUPERGROUP]:
+        await update.message.reply_text(
+            f"📍 **当前群组信息：**\n\n"
+            f"🏷️ **群组名称**: `{chat.title}`\n"
+            f"🆔 **群组 ID**: `{chat.id}`\n\n"
+            f"💡 *您可将此 ID 复制并添加到管理后台的白名单列表中。*"
+        , parse_mode="Markdown")
+    else:
+        await update.message.reply_text("❌ 此命令仅能在群组或超群中使用。")
+
 async def create_emby_user_api(username, password):
     """调用 Emby 接口创建用户"""
     url = f"{config.emby_server_url}/Users/New"
@@ -138,18 +151,33 @@ async def create_emby_user_api(username, password):
         'Content-Type': 'application/json',
         'X-Emby-Token': config.emby_api_key
     }
-    default_user_settings = get_default_user_settings()
+    
+    # 获取默认合并的策略
+    policy = get_merged_policy()
     payload = {
         "Name": username,
-        "Policy": default_user_settings.get('Policy', {}),
-        "Configuration": default_user_settings.get('Configuration', {}),
+        "Policy": policy,
         "IsHidden": True
     }
+    
+    # 如果设置了 template_user_id，尝试复制它的视图和配置属性
+    if config.template_user_id:
+        try:
+            default_user_settings = get_default_user_settings()
+            payload["Configuration"] = default_user_settings.get('Configuration', {})
+            ref_policy = default_user_settings.get('Policy', {})
+            if ref_policy:
+                merged_policy = ref_policy.copy()
+                merged_policy.update(policy)
+                payload["Policy"] = merged_policy
+        except Exception as e:
+            logger.warning(f"Failed to clone template user settings: {e}. Falling back to default.")
+
     response = requests.post(url, headers=headers, json=payload, timeout=10)
     if response.status_code == 200:
         user_data = response.json()
         user_id = user_data['Id']
-        # 设置用户权限策略
+        # 确保显式调用 policy 更新以合并所有可能漏掉的字段
         update_user_policy(user_id)
         # 设置用户密码
         set_user_password(user_id, password)
